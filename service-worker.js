@@ -1,4 +1,4 @@
-const CACHE_NAME = "cerebrum-v4";
+const CACHE_NAME = "cerebrum-v5";
 
 const ASSETS = [
   "./",

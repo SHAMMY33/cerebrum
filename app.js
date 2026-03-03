@@ -170,6 +170,31 @@ async function getWikiItems(count, activeCategories) {
 }
 
 // -------------------- UI RENDER --------------------
+function getSavedMap() {
+  return JSON.parse(localStorage.getItem("cerebrum_saved_map") || "{}");
+}
+
+function setSavedMap(map) {
+  localStorage.setItem("cerebrum_saved_map", JSON.stringify(map));
+}
+
+function isSaved(id) {
+  const map = getSavedMap();
+  return Boolean(map[id]);
+}
+
+function saveItem(item) {
+  const map = getSavedMap();
+  map[item.id] = item; // store full object (works for wiki + canon)
+  setSavedMap(map);
+}
+
+function removeItem(id) {
+  const map = getSavedMap();
+  delete map[id];
+  setSavedMap(map);
+}
+
 function renderCard(item) {
   const card = document.createElement("section");
   card.className = "card";
@@ -177,6 +202,8 @@ function renderCard(item) {
 
   const inner = document.createElement("div");
   inner.className = "card-inner";
+
+  const saved = isSaved(item.id);
 
   inner.innerHTML = `
     <div class="meta">
@@ -187,31 +214,42 @@ function renderCard(item) {
     ${item.author ? `<p class="author">${escapeHtml(item.author)}</p>` : ""}
     <p class="excerpt">${escapeHtml(item.excerpt)}</p>
     <div class="actions">
-      <button class="btn" data-action="like">Like</button>
+      <button class="btn" data-action="save">${saved ? "Saved" : "Save"}</button>
       <button class="btn" data-action="open" ${item.fullTextUrl ? "" : "disabled"}>Read full</button>
     </div>
   `;
 
+  const saveBtn = inner.querySelector('[data-action="save"]');
+
+  function updateSaveLabel() {
+    saveBtn.textContent = isSaved(item.id) ? "Saved" : "Save";
+  }
+
+  function toggleSave() {
+    if (isSaved(item.id)) removeItem(item.id);
+    else saveItem(item);
+    updateSaveLabel();
+  }
+
+  // Tap Save button
+  saveBtn.addEventListener("click", toggleSave);
+
+  // Double tap anywhere on card (mobile + desktop)
+  let lastTap = 0;
+  card.addEventListener("touchend", () => {
+    const now = Date.now();
+    if (now - lastTap < 300) toggleSave();
+    lastTap = now;
+  });
+  card.addEventListener("dblclick", toggleSave);
+
+  // Open full
   inner.querySelector('[data-action="open"]')?.addEventListener("click", () => {
     if (item.fullTextUrl) window.open(item.fullTextUrl, "_blank", "noopener,noreferrer");
   });
 
-  // Like placeholder (next step we’ll implement double-tap + library)
-  inner.querySelector('[data-action="like"]')?.addEventListener("click", () => {
-    // small visual feedback
-    inner.querySelector('[data-action="like"]').textContent = "Liked";
-  });
-
   card.appendChild(inner);
   return card;
-}
-
-function renderSet(feedEl, hintEl, items, activeCategories) {
-  feedEl.innerHTML = "";
-  items.forEach((it) => feedEl.appendChild(renderCard(it)));
-
-  const filterLabel = activeCategories.length ? activeCategories.join(", ") : "Random";
-  hintEl.textContent = `Set: ${items.length} • Mode: ${filterLabel} • Close + reopen to refresh`;
 }
 
 // -------------------- THEME + FILTERS + INIT --------------------
@@ -221,6 +259,30 @@ document.addEventListener("DOMContentLoaded", async () => {
   const themeBtn = document.getElementById("themeBtn");
   const filtersBtn = document.getElementById("filtersBtn");
 
+const libraryBtn = document.getElementById("libraryBtn");
+let libraryMode = false;
+
+if (libraryBtn) {
+  libraryBtn.addEventListener("click", async () => {
+    libraryMode = !libraryMode;
+
+    if (libraryMode) {
+      libraryBtn.textContent = "Back";
+      const savedIds = getSavedIds();
+      const canonAll = await loadCanon();
+      const wikiItems = []; // future: store full objects
+
+      const allItems = [...canonAll]; // currently canon only persistent
+      const savedItems = allItems.filter(i => savedIds.includes(i.id));
+
+      renderSet(feedEl, hintEl, savedItems, []);
+      hintEl.textContent = `Library • ${savedItems.length} saved`;
+    } else {
+      libraryBtn.textContent = "Library";
+      await buildSessionAndRender();
+    }
+  });
+}
   // THEME
   function applyTheme(theme) {
     document.documentElement.setAttribute("data-theme", theme);
