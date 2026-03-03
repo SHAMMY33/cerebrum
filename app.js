@@ -1,6 +1,8 @@
-// Cerebrum - app.js (Canon session + Theme toggle + SW register)
+// Cerebrum - app.js (Canon + Wikipedia mixed session + Theme + Filters + SW)
 
 const SESSION_SIZE = 10;
+const WIKI_RATIO = 0.6; // 60% Wikipedia, 40% Canon
+const ALLOWED_CATEGORIES = ["History","Philosophy","War","Poetry","Science","Law","Biography","Economics"];
 
 // -------------------- SERVICE WORKER --------------------
 if ("serviceWorker" in navigator) {
@@ -18,19 +20,24 @@ function escapeHtml(str) {
   }[m]));
 }
 
-function pickRandom(items, n) {
-  const copy = items.slice();
+function shuffle(arr) {
+  const copy = arr.slice();
   for (let i = copy.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [copy[i], copy[j]] = [copy[j], copy[i]];
   }
-  return copy.slice(0, Math.min(n, copy.length));
+  return copy;
+}
+
+function pickRandom(items, n) {
+  return shuffle(items).slice(0, Math.min(n, items.length));
 }
 
 function normalizeCanonItem(it) {
   return {
     id: it.id || `canon_${Math.random().toString(36).slice(2)}`,
-    category: it.category || "History",
+    type: "canon",
+    category: ALLOWED_CATEGORIES.includes(it.category) ? it.category : "History",
     title: it.title || "Untitled",
     author: it.author || "",
     excerpt: it.excerpt || "",
@@ -40,38 +47,192 @@ function normalizeCanonItem(it) {
   };
 }
 
+function normalizeWikiItem(it) {
+  return {
+    id: it.id || `wiki_${Math.random().toString(36).slice(2)}`,
+    type: "wiki",
+    category: it.category || "History",
+    title: it.title || "Untitled",
+    author: "",
+    excerpt: it.excerpt || "",
+    source: it.source || "Wikipedia",
+    fullTextUrl: it.fullTextUrl || null,
+    tags: it.tags || []
+  };
+}
+
+// -------------------- CANON --------------------
 async function loadCanon() {
   const res = await fetch("data/canon.json", { cache: "no-store" });
   if (!res.ok) throw new Error(`HTTP ${res.status} loading data/canon.json`);
   const data = await res.json();
-  return Array.isArray(data.items) ? data.items : [];
+  const items = Array.isArray(data.items) ? data.items : [];
+  return items.map(normalizeCanonItem);
 }
 
-// -------------------- MAIN (runs after DOM is ready) --------------------
-document.addEventListener("DOMContentLoaded", async () => {
-  const feed = document.getElementById("feed");
-  const hint = document.getElementById("hint");
-  const themeBtn = document.getElementById("themeBtn");
+// -------------------- WIKIPEDIA --------------------
+async function fetchRandomWikiSummary() {
+  // REST endpoint for random summary
+  const res = await fetch("https://en.wikipedia.org/api/rest_v1/page/random/summary", {
+    headers: { "accept": "application/json" }
+  });
+  if (!res.ok) throw new Error(`Wiki HTTP ${res.status}`);
+  const data = await res.json();
 
-  // -------- THEME (robust) --------
-  function applyTheme(theme) {
-    // set both attribute AND class (belt + suspenders)
-    document.documentElement.setAttribute("data-theme", theme);
-    document.body.classList.toggle("light", theme === "light");
+  const title = data.title || "";
+  const excerpt = data.extract || "";
+  const fullTextUrl = data?.content_urls?.desktop?.page || null;
 
-    localStorage.setItem("cerebrum_theme", theme);
-    if (themeBtn) themeBtn.textContent = theme === "light" ? "☀" : "☾";
-    if (hint) hint.textContent = `Theme: ${theme} • Set size: ${SESSION_SIZE}`;
+  return { title, excerpt, fullTextUrl, raw: data };
+}
+
+function isGoodWiki({ title, excerpt, raw }) {
+  if (!title || !excerpt) return false;
+
+  const t = title.toLowerCase();
+  const e = excerpt.toLowerCase();
+
+  // reject lists/disambiguation/stubs
+  if (t.startsWith("list of ")) return false;
+  if (e.includes("may refer to:")) return false;
+  if (raw?.type === "disambiguation") return false;
+
+  // too short = usually junk
+  if (excerpt.length < 240) return false;
+
+  return true;
+}
+
+function guessCategory(title, excerpt) {
+  const text = `${title} ${excerpt}`.toLowerCase();
+
+  // War
+  if (/(war|battle|campaign|siege|invasion|army|navy|air force|military|regiment|division|weapon|conflict)/.test(text))
+    return "War";
+
+  // Law / Founding / Government
+  if (/(constitution|amendment|court|supreme court|law|legal|treaty|rights|congress|parliament|jurisdiction)/.test(text))
+    return "Law";
+
+  // Philosophy
+  if (/(philosoph|ethics|stoic|metaphysics|epistemology|logic|plato|aristotle|kant|nietzsche|confucius)/.test(text))
+    return "Philosophy";
+
+  // Poetry / Literature
+  if (/(poet|poetry|sonnet|novel|playwright|verse|stanza|shakespeare|literary)/.test(text))
+    return "Poetry";
+
+  // Science
+  if (/(physics|chemistry|biology|astronomy|scientist|experiment|theory|genetics|medicine|engineering|mathematics)/.test(text))
+    return "Science";
+
+  // Economics
+  if (/(econom|market|trade|inflation|money|bank|finance|industry|capital|labor|gdp)/.test(text))
+    return "Economics";
+
+  // Biography (people)
+  if (/(was an|is an)\s+(american|british|french|german|italian|spanish|chinese|japanese|russian|politician|general|scientist|writer|poet|composer|philosopher|entrepreneur|engineer|pilot)/.test(text))
+    return "Biography";
+
+  // History fallback
+  return "History";
+}
+
+async function getWikiItems(count, activeCategories) {
+  const items = [];
+  let attempts = 0;
+  const maxAttempts = 40; // prevent infinite loops
+
+  while (items.length < count && attempts < maxAttempts) {
+    attempts++;
+    try {
+      const s = await fetchRandomWikiSummary();
+      if (!isGoodWiki(s)) continue;
+
+      const category = guessCategory(s.title, s.excerpt);
+      if (!ALLOWED_CATEGORIES.includes(category)) continue;
+
+      if (activeCategories.length && !activeCategories.includes(category)) continue;
+
+      items.push(normalizeWikiItem({
+        category,
+        title: s.title,
+        excerpt: s.excerpt,
+        source: "Wikipedia",
+        fullTextUrl: s.fullTextUrl
+      }));
+    } catch {
+      // ignore and continue
+    }
   }
 
+  return items;
+}
+
+// -------------------- UI RENDER --------------------
+function renderCard(item) {
+  const card = document.createElement("section");
+  card.className = "card";
+  card.dataset.id = item.id;
+
+  const inner = document.createElement("div");
+  inner.className = "card-inner";
+
+  inner.innerHTML = `
+    <div class="meta">
+      <div class="category">${escapeHtml(item.category)}</div>
+      <div class="source">${escapeHtml(item.source || "")}</div>
+    </div>
+    <h2 class="title">${escapeHtml(item.title)}</h2>
+    ${item.author ? `<p class="author">${escapeHtml(item.author)}</p>` : ""}
+    <p class="excerpt">${escapeHtml(item.excerpt)}</p>
+    <div class="actions">
+      <button class="btn" data-action="like">Like</button>
+      <button class="btn" data-action="open" ${item.fullTextUrl ? "" : "disabled"}>Read full</button>
+    </div>
+  `;
+
+  inner.querySelector('[data-action="open"]')?.addEventListener("click", () => {
+    if (item.fullTextUrl) window.open(item.fullTextUrl, "_blank", "noopener,noreferrer");
+  });
+
+  // Like placeholder (next step we’ll implement double-tap + library)
+  inner.querySelector('[data-action="like"]')?.addEventListener("click", () => {
+    // small visual feedback
+    inner.querySelector('[data-action="like"]').textContent = "Liked";
+  });
+
+  card.appendChild(inner);
+  return card;
+}
+
+function renderSet(feedEl, hintEl, items, activeCategories) {
+  feedEl.innerHTML = "";
+  items.forEach((it) => feedEl.appendChild(renderCard(it)));
+
+  const filterLabel = activeCategories.length ? activeCategories.join(", ") : "Random";
+  hintEl.textContent = `Set: ${items.length} • Mode: ${filterLabel} • Close + reopen to refresh`;
+}
+
+// -------------------- THEME + FILTERS + INIT --------------------
+document.addEventListener("DOMContentLoaded", async () => {
+  const feedEl = document.getElementById("feed");
+  const hintEl = document.getElementById("hint");
+  const themeBtn = document.getElementById("themeBtn");
+  const filtersBtn = document.getElementById("filtersBtn");
+
+  // THEME
+  function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("cerebrum_theme", theme);
+    if (themeBtn) themeBtn.textContent = theme === "light" ? "☀" : "☾";
+  }
   function initTheme() {
     const saved = localStorage.getItem("cerebrum_theme");
     if (saved === "light" || saved === "dark") return applyTheme(saved);
-
     const prefersLight = window.matchMedia?.("(prefers-color-scheme: light)")?.matches;
-    return applyTheme(prefersLight ? "light" : "dark");
+    applyTheme(prefersLight ? "light" : "dark");
   }
-
   initTheme();
 
   if (themeBtn) {
@@ -81,55 +242,64 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // -------- FEED RENDER --------
-  function renderCard(item) {
-    const card = document.createElement("section");
-    card.className = "card";
-    card.dataset.id = item.id;
+  // FILTERS (stored)
+  function getActiveCategories() {
+    const raw = localStorage.getItem("cerebrum_filters") || "";
+    const list = raw.split(",").map(s => s.trim()).filter(Boolean);
+    return list.filter(c => ALLOWED_CATEGORIES.includes(c));
+  }
+  function setActiveCategories(list) {
+    localStorage.setItem("cerebrum_filters", list.join(","));
+  }
 
-    const inner = document.createElement("div");
-    inner.className = "card-inner";
+  if (filtersBtn) {
+    filtersBtn.addEventListener("click", async () => {
+      const current = getActiveCategories();
+      const msg =
+        `Type categories separated by commas, or leave blank for Random.\n\nAllowed:\n${ALLOWED_CATEGORIES.join(", ")}\n\nCurrent:\n${current.length ? current.join(", ") : "Random"}`;
+      const input = prompt(msg, current.join(", "));
+      if (input === null) return;
 
-    inner.innerHTML = `
-      <div class="meta">
-        <div class="category">${escapeHtml(item.category)}</div>
-        <div class="source">${escapeHtml(item.source || "")}</div>
-      </div>
-      <h2 class="title">${escapeHtml(item.title)}</h2>
-      <p class="author">${escapeHtml(item.author || "")}</p>
-      <p class="excerpt">${escapeHtml(item.excerpt)}</p>
-      <div class="actions">
-        <button class="btn" data-action="like">Like</button>
-        <button class="btn" data-action="open" ${item.fullTextUrl ? "" : "disabled"}>Read full</button>
-      </div>
-    `;
+      const next = input.split(",").map(s => s.trim()).filter(Boolean);
+      const filtered = next.filter(c => ALLOWED_CATEGORIES.includes(c));
+      setActiveCategories(filtered);
 
-    inner.querySelector('[data-action="open"]')?.addEventListener("click", () => {
-      if (item.fullTextUrl) window.open(item.fullTextUrl, "_blank", "noopener,noreferrer");
+      // rebuild session immediately
+      await buildSessionAndRender();
     });
-
-    card.appendChild(inner);
-    return card;
   }
 
-  function renderSet(items) {
-    feed.innerHTML = "";
-    items.forEach((it) => feed.appendChild(renderCard(it)));
-    // hint is already showing theme; keep it informative
+  async function buildSessionAndRender() {
+    const activeCategories = getActiveCategories();
+
+    const canonAll = await loadCanon();
+    const canonPool = activeCategories.length
+      ? canonAll.filter(c => activeCategories.includes(c.category))
+      : canonAll;
+
+    const wikiCount = Math.round(SESSION_SIZE * WIKI_RATIO);
+    const canonCount = SESSION_SIZE - wikiCount;
+
+    const canonSet = pickRandom(canonPool, canonCount);
+    const wikiSet = await getWikiItems(wikiCount, activeCategories);
+
+    // If wiki couldn’t fill (rare), top up with canon
+    const short = SESSION_SIZE - (canonSet.length + wikiSet.length);
+    const topUp = short > 0 ? pickRandom(canonPool.filter(c => !canonSet.some(x => x.id === c.id)), short) : [];
+
+    const session = shuffle([...canonSet, ...wikiSet, ...topUp]).slice(0, SESSION_SIZE);
+    renderSet(feedEl, hintEl, session, activeCategories);
   }
 
-  // -------- INIT FEED --------
   try {
-    const canon = (await loadCanon()).map(normalizeCanonItem);
-    const set = pickRandom(canon, SESSION_SIZE);
-    renderSet(set);
+    await buildSessionAndRender();
   } catch (e) {
-    feed.innerHTML = "";
+    feedEl.innerHTML = "";
     const err = document.createElement("div");
     err.style.padding = "16px";
     err.style.color = "var(--muted)";
     err.textContent = `Error: ${e.message}`;
-    feed.appendChild(err);
-    if (hint) hint.textContent = "Error loading canon.json";
+    feedEl.appendChild(err);
+    hintEl.textContent = "Error building session.";
   }
 });
