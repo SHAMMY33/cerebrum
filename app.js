@@ -1,17 +1,47 @@
-// ---- Canon loading + 10-card session ----
+// Cerebrum - app.js (Canon-only session + Theme toggle + SW register)
 
+const feed = document.getElementById("feed");
+const hint = document.getElementById("hint");
+const themeBtn = document.getElementById("themeBtn");
+
+// -------------------- THEME --------------------
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  localStorage.setItem("cerebrum_theme", theme);
+  if (themeBtn) themeBtn.textContent = theme === "light" ? "☀" : "☾";
+}
+
+function initTheme() {
+  const saved = localStorage.getItem("cerebrum_theme");
+  if (saved === "light" || saved === "dark") {
+    applyTheme(saved);
+    return;
+  }
+  const prefersLight = window.matchMedia?.("(prefers-color-scheme: light)")?.matches;
+  applyTheme(prefersLight ? "light" : "dark");
+}
+
+if (themeBtn) {
+  themeBtn.addEventListener("click", () => {
+    const current = document.documentElement.getAttribute("data-theme") || "dark";
+    applyTheme(current === "dark" ? "light" : "dark");
+  });
+}
+
+initTheme();
+
+// -------------------- CANON + SESSION --------------------
 const SESSION_SIZE = 10;
 
 async function loadCanon() {
   const res = await fetch("data/canon.json", { cache: "no-store" });
-  if (!res.ok) throw new Error("Failed to load canon.json");
+  if (!res.ok) throw new Error(`HTTP ${res.status} loading data/canon.json`);
   const data = await res.json();
   return Array.isArray(data.items) ? data.items : [];
 }
 
 function pickRandom(items, n) {
   const copy = items.slice();
-  // Fisher–Yates shuffle
   for (let i = copy.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [copy[i], copy[j]] = [copy[j], copy[i]];
@@ -21,15 +51,25 @@ function pickRandom(items, n) {
 
 function normalizeCanonItem(it) {
   return {
-    id: it.id,
+    id: it.id || `canon_${crypto?.randomUUID?.() || Math.random().toString(36).slice(2)}`,
     category: it.category || "History",
     title: it.title || "Untitled",
     author: it.author || "",
     excerpt: it.excerpt || "",
     source: it.source || "Canon",
     fullTextUrl: it.fullTextUrl || null,
-    tags: it.tags || []
+    tags: Array.isArray(it.tags) ? it.tags : []
   };
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, (m) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;"
+  }[m]));
 }
 
 function renderCard(item) {
@@ -54,7 +94,6 @@ function renderCard(item) {
     </div>
   `;
 
-  // open link
   inner.querySelector('[data-action="open"]')?.addEventListener("click", () => {
     if (item.fullTextUrl) window.open(item.fullTextUrl, "_blank", "noopener,noreferrer");
   });
@@ -67,16 +106,6 @@ function renderSet(items) {
   feed.innerHTML = "";
   items.forEach((it) => feed.appendChild(renderCard(it)));
   hint.textContent = `Set size: ${items.length}. Close + reopen to refresh.`;
-}
-
-function escapeHtml(str) {
-  return String(str).replace(/[&<>"']/g, (m) => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#039;"
-  }[m]));
 }
 
 async function initFeed() {
@@ -95,6 +124,7 @@ async function initFeed() {
   }
 }
 
+// -------------------- SERVICE WORKER --------------------
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./service-worker.js");
 }
