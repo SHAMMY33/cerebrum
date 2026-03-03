@@ -4,22 +4,21 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>Cerebrum</title>
-  <meta name="theme-color" content="#0b0b0d" />
+
+  <!-- Light-only -->
+  <meta name="theme-color" content="#ffffff" />
   <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-<header class="topbar">
-  <div class="brand">Cerebrum</div>
-  <div class="right">
-    <button id="themeBtn" class="btn icon ghost" aria-label="Toggle theme" title="Toggle theme">☾</button>
-    <button id="filtersBtn" class="btn ghost" aria-label="Filters">Filters</button>
-  </div>
-  <button id="libraryBtn" class="btn ghost">Library</button>
-</header>
+  <header class="topbar">
+    <div class="brand">Cerebrum</div>
+    <div class="right">
+      <button id="filtersBtn" class="btn ghost" aria-label="Filters">Filters</button>
+    </div>
+  </header>
 
   <main id="feed" class="feed" aria-live="polite"></main>
-
   <footer class="hint" id="hint"></footer>
 
   <script src="app.js"></script>

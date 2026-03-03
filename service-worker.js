@@ -1,4 +1,4 @@
-const CACHE_NAME = "cerebrum-v5";
+const CACHE_NAME = "cerebrum-v6";
 
 const ASSETS = [
   "./",
@@ -16,14 +16,14 @@ self.addEventListener("install", (event) => {
     const cache = await caches.open(CACHE_NAME);
     await cache.addAll(ASSETS);
   })());
-  self.skipWaiting(); // IMPORTANT: activate new SW immediately
+  self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
     await Promise.all(keys.map((k) => (k !== CACHE_NAME ? caches.delete(k) : null)));
-    await self.clients.claim(); // IMPORTANT: take control immediately
+    await self.clients.claim();
   })());
 });
 
@@ -36,7 +36,6 @@ self.addEventListener("fetch", (event) => {
       const res = await fetch(event.request);
       return res;
     } catch (e) {
-      // if offline, at least return the app shell if requested
       if (event.request.mode === "navigate") {
         const shell = await caches.match("./index.html");
         if (shell) return shell;

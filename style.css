@@ -1,31 +1,14 @@
 :root{
-  /* default: dark */
-  --bg:#0b0b0d;
-  --card:#111116;
-  --text:#f2f2f2;
-  --muted:#b8b8bf;
-  --line:#22222a;
-}
-
-:root[data-theme="light"]{
-  --bg:#f6f2ea;
+  --bg:#ffffff;
   --card:#ffffff;
-  --text:#151515;
-  --muted:#5b5b63;
-  --line:#ded8cf;
-}
-
-/* small icon-ish button */
-.btn.icon{
-  width:40px;
-  display:inline-flex;
-  justify-content:center;
-  align-items:center;
-  padding:8px 0;
+  --text:#111111;
+  --muted:#444444;
+  --line:#111111;
 }
 
 *{ box-sizing:border-box; }
 html,body{ height:100%; }
+
 body{
   margin:0;
   background:var(--bg);
@@ -43,18 +26,9 @@ body{
   justify-content:space-between;
   padding:0 14px;
   border-bottom:1px solid var(--line);
-  background:rgba(11,11,13,.92);
-  backdrop-filter: blur(8px);
+  background:var(--bg);
+  color:var(--text);
   z-index:10;
-}
-
-.topbar .brand{
-  color:var(--text);
-}
-
-.topbar .btn{
-  color:var(--text);
-  border-color:var(--line);
 }
 
 .right{
@@ -66,19 +40,20 @@ body{
 .brand{
   letter-spacing:.08em;
   font-variant: small-caps;
+  color:var(--text);
 }
 
 .btn{
   border:1px solid var(--line);
-  background:var(--card);
+  background:transparent;
   color:var(--text);
   padding:8px 10px;
   border-radius:12px;
   font-size:14px;
 }
+
 .btn.ghost{
   background:transparent;
-  color:var(--text);
 }
 
 .feed{
@@ -115,11 +90,13 @@ body{
   padding-bottom:10px;
   margin-bottom:12px;
 }
+
 .category{
   color:var(--muted);
   font-variant: small-caps;
   letter-spacing:.08em;
 }
+
 .source{
   color:var(--muted);
   font-size:12px;
@@ -127,19 +104,7 @@ body{
 
 .title{
   margin:0 0 10px 0;
-  font-size:26px;.topbar{
-  position:fixed;
-  top:0; left:0; right:0;
-  height:56px;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:0 14px;
-  border-bottom:1px solid var(--line);
-  background:var(--bg); /* important */
-  color:var(--text);     /* force correct text color */
-  z-index:10;
-}
+  font-size:26px;
   line-height:1.15;
 }
 
@@ -171,11 +136,5 @@ body{
   color:var(--muted);
   font-size:12px;
   border-top:1px solid var(--line);
-  background:rgba(11,11,13,.92);
-}
-
-/* fallback if attribute selector gets weird in some contexts */
-body.light {
-  background: var(--bg);
-  color: var(--text);
+  background:var(--bg);
 }
