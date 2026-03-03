@@ -8,7 +8,6 @@ const ALLOWED_CATEGORIES = [
 ];
 
 // Only allow fiction/literature items if they match these classic names/works.
-// (Expand whenever you want; keep it tight to avoid pop culture drift.)
 const CLASSIC_FICTION_ALLOWLIST = [
   "shakespeare",
   "hemingway",
@@ -31,29 +30,9 @@ const CLASSIC_FICTION_ALLOWLIST = [
 
 // Reject obvious pop culture / entertainment pages.
 const POP_CULTURE_BLOCKLIST = [
-  "film",
-  "movie",
-  "television",
-  "tv series",
-  "video game",
-  "game",
-  "album",
-  "single",
-  "song",
-  "rapper",
-  "actor",
-  "actress",
-  "singer",
-  "band",
-  "soundtrack",
-  "anime",
-  "manga",
-  "comic",
-  "superhero",
-  "wrestler",
-  "youtuber",
-  "tiktok",
-  "instagram"
+  "film","movie","television","tv series","video game","game","album","single","song",
+  "rapper","actor","actress","singer","band","soundtrack","anime","manga","comic",
+  "superhero","wrestler","youtuber","tiktok","instagram"
 ];
 
 // -------------------- SERVICE WORKER --------------------
@@ -185,17 +164,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     const t = title.toLowerCase();
     const e = excerpt.toLowerCase();
 
-    // reject lists/disambiguation/stubs
     if (t.startsWith("list of ")) return false;
     if (e.includes("may refer to:")) return false;
     if (raw?.type === "disambiguation") return false;
 
-    // too short = usually junk
     if (excerpt.length < 240) return false;
 
-    // block pop culture/entertainment aggressively
     if (textHasAny(title, POP_CULTURE_BLOCKLIST) || textHasAny(excerpt, POP_CULTURE_BLOCKLIST)) {
-      // allow ONLY if it matches classic fiction allowlist
       const allow = textHasAny(title, CLASSIC_FICTION_ALLOWLIST) || textHasAny(excerpt, CLASSIC_FICTION_ALLOWLIST);
       if (!allow) return false;
     }
@@ -206,8 +181,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   function guessCategory(title, excerpt) {
     const text = `${title} ${excerpt}`.toLowerCase();
 
-    // US Military History is ONLY produced by OnThisDay logic, not random guessing.
-    // (Keeps it special + avoids random US-military spam.)
     if (/(war|battle|campaign|siege|invasion|army|navy|air force|military|regiment|division|weapon|conflict)/.test(text))
       return "War";
 
@@ -217,7 +190,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (/(philosoph|ethics|stoic|metaphysics|epistemology|logic|plato|aristotle|kant|nietzsche|confucius)/.test(text))
       return "Philosophy";
 
-    // Poetry category is your “literature lane” (classics gating already handled above)
     if (/(poet|poetry|sonnet|novel|playwright|verse|stanza|literary|shakespeare|hemingway|bradbury)/.test(text))
       return "Poetry";
 
@@ -227,7 +199,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (/(econom|market|trade|inflation|money|bank|finance|industry|capital|labor|gdp)/.test(text))
       return "Economics";
 
-    // Biography (people)
     if (/(was an|is an)\s+(american|british|french|german|italian|spanish|chinese|japanese|russian|politician|general|scientist|writer|poet|composer|philosopher|entrepreneur|engineer|pilot)/.test(text))
       return "Biography";
 
@@ -237,39 +208,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function getWikiItems(count, activeCategories) {
     const items = [];
     let attempts = 0;
-    const maxAttempts = 80; // stricter filters = more retries
+    const maxAttempts = 80;
 
-    // Disallow US Military History from random wiki feed (we only do it via OnThisDay)// -------------------- LIBRARY MODE --------------------
-if (libraryBtn) {
-  libraryBtn.addEventListener("click", async () => {
-    libraryMode = !libraryMode;
-
-    if (libraryMode) {
-      libraryBtn.textContent = "Back";
-
-      const savedMap = getSavedMap();
-      const savedItems = Object.values(savedMap);
-
-      if (!savedItems.length) {
-        feedEl.innerHTML = "";
-        const msg = document.createElement("div");
-        msg.style.padding = "16px";
-        msg.style.color = "var(--muted)";
-        msg.textContent = "No saved items.";
-        feedEl.appendChild(msg);
-        hintEl.textContent = "Library • 0 items";
-        return;
-      }
-
-      feedEl.innerHTML = "";
-      savedItems.forEach(item => feedEl.appendChild(renderCard(item)));
-      hintEl.textContent = `Library • ${savedItems.length} saved`;
-    } else {
-      libraryBtn.textContent = "Library";
-      await buildSessionAndRender();
-    }
-  });
-}
+    // Disallow US Military History from random wiki feed (we only do it via OnThisDay)
     const effectiveActive = activeCategories.filter(c => c !== "US Military History");
 
     while (items.length < count && attempts < maxAttempts) {
@@ -300,8 +241,6 @@ if (libraryBtn) {
   }
 
   // -------------------- "THIS DAY" US MILITARY HISTORY --------------------
-  // Wikipedia REST feed endpoint:
-  // https://en.wikipedia.org/api/rest_v1/feed/onthisday/events/MM/DD
   async function fetchOnThisDayEvents(mm, dd) {
     const res = await fetch(`https://en.wikipedia.org/api/rest_v1/feed/onthisday/events/${mm}/${dd}`, {
       headers: { "accept": "application/json" }
@@ -312,11 +251,9 @@ if (libraryBtn) {
 
   function isMilitaryRelevant(text) {
     const t = (text || "").toLowerCase();
-
     const hasUS = /(united states|u\.s\.|us )/.test(t);
     const hasBranch = /(army|navy|marine corps|air force|coast guard|space force)/.test(t);
     const hasWarTerms = /(battle|war|campaign|siege|invasion|landing|offensive|raid|fleet|regiment|division|brigade|platoon|carrier|destroyer|submarine|aircraft|bombing|armistice)/.test(t);
-
     return (hasBranch && hasWarTerms) || (hasUS && hasWarTerms);
   }
 
@@ -342,7 +279,6 @@ if (libraryBtn) {
   }
 
   async function getOnThisDayMilitaryItem(activeCategories) {
-    // Only include if filters allow it
     if (activeCategories.length && !activeCategories.includes("US Military History")) return null;
 
     const now = new Date();
@@ -408,7 +344,6 @@ if (libraryBtn) {
 
     saveBtn.addEventListener("click", toggleSave);
 
-    // Double tap anywhere on card (mobile + desktop)
     let lastTap = 0;
     card.addEventListener("touchend", () => {
       const now = Date.now();
@@ -460,37 +395,37 @@ if (libraryBtn) {
     });
   }
 
-// -------------------- LIBRARY MODE --------------------
-if (libraryBtn) {
-  libraryBtn.addEventListener("click", async () => {
-    libraryMode = !libraryMode;
+  // -------------------- LIBRARY MODE --------------------
+  if (libraryBtn) {
+    libraryBtn.addEventListener("click", async () => {
+      libraryMode = !libraryMode;
 
-    if (libraryMode) {
-      libraryBtn.textContent = "Back";
+      if (libraryMode) {
+        libraryBtn.textContent = "Back";
 
-      const savedMap = getSavedMap();
-      const savedItems = Object.values(savedMap);
+        const savedMap = getSavedMap();
+        const savedItems = Object.values(savedMap);
 
-      if (!savedItems.length) {
+        if (!savedItems.length) {
+          feedEl.innerHTML = "";
+          const msg = document.createElement("div");
+          msg.style.padding = "16px";
+          msg.style.color = "var(--muted)";
+          msg.textContent = "No saved items.";
+          feedEl.appendChild(msg);
+          hintEl.textContent = "Library • 0 items";
+          return;
+        }
+
         feedEl.innerHTML = "";
-        const msg = document.createElement("div");
-        msg.style.padding = "16px";
-        msg.style.color = "var(--muted)";
-        msg.textContent = "No saved items.";
-        feedEl.appendChild(msg);
-        hintEl.textContent = "Library • 0 items";
-        return;
+        savedItems.forEach(item => feedEl.appendChild(renderCard(item)));
+        hintEl.textContent = `Library • ${savedItems.length} saved`;
+      } else {
+        libraryBtn.textContent = "Library";
+        await buildSessionAndRender();
       }
-
-      feedEl.innerHTML = "";
-      savedItems.forEach(item => feedEl.appendChild(renderCard(item)));
-      hintEl.textContent = `Library • ${savedItems.length} saved`;
-    } else {
-      libraryBtn.textContent = "Library";
-      await buildSessionAndRender();
-    }
-  });
-}
+    });
+  }
 
   // -------------------- SESSION BUILD --------------------
   async function buildSessionAndRender() {
@@ -503,7 +438,6 @@ if (libraryBtn) {
 
     const onThisDay = await getOnThisDayMilitaryItem(activeCategories);
 
-    // If we got a "This day" item, it replaces one normal Wikipedia slot
     const baseWikiTarget = Math.round(SESSION_SIZE * WIKI_RATIO);
     const wikiCountTarget = onThisDay ? Math.max(0, baseWikiTarget - 1) : baseWikiTarget;
     const canonCountTarget = SESSION_SIZE - (wikiCountTarget + (onThisDay ? 1 : 0));
@@ -511,7 +445,6 @@ if (libraryBtn) {
     const canonSet = pickRandom(canonPool, canonCountTarget);
     const wikiSet = await getWikiItems(wikiCountTarget, activeCategories);
 
-    // If wiki can't fill, top up with canon (still real sourced items)
     const short = SESSION_SIZE - (canonSet.length + wikiSet.length + (onThisDay ? 1 : 0));
     const topUp = short > 0
       ? pickRandom(canonPool.filter(c => !canonSet.some(x => x.id === c.id)), short)
@@ -524,7 +457,6 @@ if (libraryBtn) {
       ...topUp
     ]).slice(0, SESSION_SIZE);
 
-    // Hard safety: if somehow empty, show a clear message (no fake content)
     if (!session.length) {
       feedEl.innerHTML = "";
       const msg = document.createElement("div");
