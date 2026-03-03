@@ -1,0 +1,105 @@
+{
+  "version": "1.0",
+  "items": [
+    {
+      "id": "canon_poetry_001",
+      "category": "Poetry",
+      "title": "If—",
+      "author": "Rudyard Kipling",
+      "excerpt": "If you can keep your head when all about you are losing theirs and blaming it on you… If you can trust yourself when all men doubt you, but make allowance for their doubting too…",
+      "source": "Project Gutenberg / Public Domain",
+      "fullTextUrl": "https://www.gutenberg.org/ebooks/646",
+      "tags": ["discipline", "character"]
+    },
+    {
+      "id": "canon_poetry_002",
+      "category": "Poetry",
+      "title": "Invictus",
+      "author": "William Ernest Henley",
+      "excerpt": "In the fell clutch of circumstance I have not winced nor cried aloud… I am the master of my fate: I am the captain of my soul.",
+      "source": "Public Domain",
+      "fullTextUrl": "https://en.wikisource.org/wiki/Invictus",
+      "tags": ["resilience", "will"]
+    },
+    {
+      "id": "canon_law_001",
+      "category": "Law",
+      "title": "Declaration of Independence",
+      "author": "Thomas Jefferson (Drafting Committee)",
+      "excerpt": "We hold these truths to be self-evident… that all men are created equal… that they are endowed… with certain unalienable Rights…",
+      "source": "Wikisource (Public Domain)",
+      "fullTextUrl": "https://en.wikisource.org/wiki/United_States_Declaration_of_Independence",
+      "tags": ["rights", "founding"]
+    },
+    {
+      "id": "canon_law_002",
+      "category": "Law",
+      "title": "Federalist No. 51",
+      "author": "James Madison",
+      "excerpt": "Ambition must be made to counteract ambition… If men were angels, no government would be necessary.",
+      "source": "Wikisource (Public Domain)",
+      "fullTextUrl": "https://en.wikisource.org/wiki/The_Federalist_Papers/No._51",
+      "tags": ["institutions", "power"]
+    },
+    {
+      "id": "canon_phil_001",
+      "category": "Philosophy",
+      "title": "Meditations",
+      "author": "Marcus Aurelius",
+      "excerpt": "You have power over your mind—not outside events. Realize this, and you will find strength.",
+      "source": "Wikisource (Public Domain translation)",
+      "fullTextUrl": "https://en.wikisource.org/wiki/The_Meditations_of_the_Emperor_Marcus_Antoninus",
+      "tags": ["stoicism", "control"]
+    },
+    {
+      "id": "canon_phil_002",
+      "category": "Philosophy",
+      "title": "Enchiridion",
+      "author": "Epictetus",
+      "excerpt": "Some things are up to us and some things are not. Begin from this, and you will not be disturbed.",
+      "source": "Wikisource (Public Domain translation)",
+      "fullTextUrl": "https://en.wikisource.org/wiki/Enchiridion",
+      "tags": ["stoicism", "discipline"]
+    },
+    {
+      "id": "canon_war_001",
+      "category": "War",
+      "title": "Henry V",
+      "author": "William Shakespeare",
+      "excerpt": "We few, we happy few, we band of brothers… for he today that sheds his blood with me shall be my brother.",
+      "source": "Wikisource (Public Domain)",
+      "fullTextUrl": "https://en.wikisource.org/wiki/Henry_V",
+      "tags": ["leadership", "brotherhood"]
+    },
+    {
+      "id": "canon_bio_001",
+      "category": "Biography",
+      "title": "Gettysburg Address",
+      "author": "Abraham Lincoln",
+      "excerpt": "…that this nation, under God, shall have a new birth of freedom… and that government of the people… shall not perish from the earth.",
+      "source": "Wikisource (Public Domain)",
+      "fullTextUrl": "https://en.wikisource.org/wiki/Gettysburg_Address",
+      "tags": ["leadership", "civil war"]
+    },
+    {
+      "id": "canon_science_001",
+      "category": "Science",
+      "title": "On Discovery",
+      "author": "Isaac Newton",
+      "excerpt": "If I have seen further it is by standing on the shoulders of giants.",
+      "source": "Wikisource (Public Domain)",
+      "fullTextUrl": "https://en.wikisource.org/wiki/Letters_of_Isaac_Newton",
+      "tags": ["progress", "humility"]
+    },
+    {
+      "id": "canon_econ_001",
+      "category": "Economics",
+      "title": "Wealth of Nations",
+      "author": "Adam Smith",
+      "excerpt": "The greatest improvement in the productive powers of labour… seem to have been the effects of the division of labour.",
+      "source": "Wikisource (Public Domain)",
+      "fullTextUrl": "https://en.wikisource.org/wiki/An_Inquiry_into_the_Nature_and_Causes_of_the_Wealth_of_Nations",
+      "tags": ["markets", "productivity"]
+    }
+  ]
+}
