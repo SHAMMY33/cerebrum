@@ -151,3 +151,9 @@ body{
   border-top:1px solid var(--line);
   background:rgba(11,11,13,.92);
 }
+
+/* fallback if attribute selector gets weird in some contexts */
+body.light {
+  background: var(--bg);
+  color: var(--text);
+}
