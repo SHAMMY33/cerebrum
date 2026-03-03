@@ -66,6 +66,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const feedEl = document.getElementById("feed");
   const hintEl = document.getElementById("hint");
   const filtersBtn = document.getElementById("filtersBtn");
+  const libraryBtn = document.getElementById("libraryBtn");
+  let libraryMode = false;
 
   // -------------------- HELPERS --------------------
   function escapeHtml(str) {
@@ -237,7 +239,37 @@ document.addEventListener("DOMContentLoaded", async () => {
     let attempts = 0;
     const maxAttempts = 80; // stricter filters = more retries
 
-    // Disallow US Military History from random wiki feed (we only do it via OnThisDay)
+    // Disallow US Military History from random wiki feed (we only do it via OnThisDay)// -------------------- LIBRARY MODE --------------------
+if (libraryBtn) {
+  libraryBtn.addEventListener("click", async () => {
+    libraryMode = !libraryMode;
+
+    if (libraryMode) {
+      libraryBtn.textContent = "Back";
+
+      const savedMap = getSavedMap();
+      const savedItems = Object.values(savedMap);
+
+      if (!savedItems.length) {
+        feedEl.innerHTML = "";
+        const msg = document.createElement("div");
+        msg.style.padding = "16px";
+        msg.style.color = "var(--muted)";
+        msg.textContent = "No saved items.";
+        feedEl.appendChild(msg);
+        hintEl.textContent = "Library • 0 items";
+        return;
+      }
+
+      feedEl.innerHTML = "";
+      savedItems.forEach(item => feedEl.appendChild(renderCard(item)));
+      hintEl.textContent = `Library • ${savedItems.length} saved`;
+    } else {
+      libraryBtn.textContent = "Library";
+      await buildSessionAndRender();
+    }
+  });
+}
     const effectiveActive = activeCategories.filter(c => c !== "US Military History");
 
     while (items.length < count && attempts < maxAttempts) {
@@ -427,6 +459,38 @@ document.addEventListener("DOMContentLoaded", async () => {
       await buildSessionAndRender();
     });
   }
+
+// -------------------- LIBRARY MODE --------------------
+if (libraryBtn) {
+  libraryBtn.addEventListener("click", async () => {
+    libraryMode = !libraryMode;
+
+    if (libraryMode) {
+      libraryBtn.textContent = "Back";
+
+      const savedMap = getSavedMap();
+      const savedItems = Object.values(savedMap);
+
+      if (!savedItems.length) {
+        feedEl.innerHTML = "";
+        const msg = document.createElement("div");
+        msg.style.padding = "16px";
+        msg.style.color = "var(--muted)";
+        msg.textContent = "No saved items.";
+        feedEl.appendChild(msg);
+        hintEl.textContent = "Library • 0 items";
+        return;
+      }
+
+      feedEl.innerHTML = "";
+      savedItems.forEach(item => feedEl.appendChild(renderCard(item)));
+      hintEl.textContent = `Library • ${savedItems.length} saved`;
+    } else {
+      libraryBtn.textContent = "Library";
+      await buildSessionAndRender();
+    }
+  });
+}
 
   // -------------------- SESSION BUILD --------------------
   async function buildSessionAndRender() {
