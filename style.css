@@ -48,6 +48,15 @@ body{
   z-index:10;
 }
 
+.topbar .brand{
+  color:var(--text);
+}
+
+.topbar .btn{
+  color:var(--text);
+  border-color:var(--line);
+}
+
 .right{
   display:flex;
   gap:10px;
@@ -69,6 +78,7 @@ body{
 }
 .btn.ghost{
   background:transparent;
+  color:var(--text);
 }
 
 .feed{
@@ -117,7 +127,19 @@ body{
 
 .title{
   margin:0 0 10px 0;
-  font-size:26px;
+  font-size:26px;.topbar{
+  position:fixed;
+  top:0; left:0; right:0;
+  height:56px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 14px;
+  border-bottom:1px solid var(--line);
+  background:var(--bg); /* important */
+  color:var(--text);     /* force correct text color */
+  z-index:10;
+}
   line-height:1.15;
 }
 
